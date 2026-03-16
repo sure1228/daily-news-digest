@@ -1,6 +1,7 @@
 import logging
-from typing import List, Optional
+from typing import List
 from datetime import datetime
+import os
 import requests
 
 from src.models import NewsItem
@@ -9,11 +10,37 @@ from src.config import SUMMARY_PROMPT
 
 logger = logging.getLogger(__name__)
 
+AI_PROVIDERS = {
+    "kimi": {
+        "url": "https://api.moonshot.cn/v1/chat/completions",
+        "model": "moonshot-v1-8k",
+    },
+    "qwen": {
+        "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        "model": "qwen-turbo",
+    },
+    "deepseek": {
+        "url": "https://api.deepseek.com/v1/chat/completions",
+        "model": "deepseek-chat",
+    },
+    "openai": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "model": "gpt-3.5-turbo",
+    },
+}
+
 
 class Summarizer:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, provider: str = "kimi"):
         self.api_key = api_key
-        self.api_url = "https://api.moonshot.cn/v1/chat/completions"
+        self.provider = provider.lower() if provider else "kimi"
+
+        if self.provider in AI_PROVIDERS:
+            self.api_url = AI_PROVIDERS[self.provider]["url"]
+            self.model = AI_PROVIDERS[self.provider]["model"]
+        else:
+            self.api_url = AI_PROVIDERS["kimi"]["url"]
+            self.model = AI_PROVIDERS["kimi"]["model"]
 
     def generate_summary(self, news_items: List[NewsItem]) -> str:
         if not news_items:
@@ -29,7 +56,7 @@ class Summarizer:
             response = self._call_api(news_content)
             return response
         except Exception as e:
-            logger.error(f"Failed to generate summary: {e}")
+            logger.error(f"Failed to generate summary with {self.provider}: {e}")
             return self._format_as_broadcast(news_items)
 
     def format_news_for_summary(self, items: List[NewsItem]) -> str:
@@ -99,11 +126,11 @@ class Summarizer:
         }
 
         data = {
-            "model": "moonshot-v1-8k",
+            "model": self.model,
             "messages": [
                 {
                     "role": "system",
-                    "content": "你是一位专业的新闻主播，擅长用简洁、口语化的方式播报新闻。",
+                    "content": "你是一位专业新闻主播，擅长用简洁、口语化的方式播报新闻。",
                 },
                 {
                     "role": "user",
@@ -111,10 +138,10 @@ class Summarizer:
                 },
             ],
             "temperature": 0.7,
-            "max_tokens": 3000,
+            "max_tokens": 4000,
         }
 
-        response = requests.post(self.api_url, headers=headers, json=data, timeout=60)
+        response = requests.post(self.api_url, headers=headers, json=data, timeout=120)
         response.raise_for_status()
 
         result = response.json()

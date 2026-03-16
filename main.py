@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from src.config import RSS_SOURCES, KIMI_API_KEY, PUSHPLUS_TOKEN
+from src.config import RSS_SOURCES, AI_API_KEY, AI_PROVIDER, PUSHPLUS_TOKEN
 from src.fetcher import NewsFetcher
 from src.summarizer import Summarizer
 from src.tts import TTSEngine
@@ -36,7 +36,10 @@ async def main():
         return
 
     logger.info("Generating summary...")
-    summarizer = Summarizer(os.getenv("KIMI_API_KEY", KIMI_API_KEY))
+    api_key = os.getenv("AI_API_KEY") or os.getenv("KIMI_API_KEY", AI_API_KEY)
+    provider = os.getenv("AI_PROVIDER", AI_PROVIDER)
+    summarizer = Summarizer(api_key, provider)
+    logger.info(f"Using AI provider: {summarizer.provider}")
     summary = summarizer.generate_summary(news_items)
     logger.info(f"Summary generated: {len(summary)} characters")
 
