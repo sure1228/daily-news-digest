@@ -65,18 +65,23 @@ async def main():
     
     audio_url = None
     if audio_path:
-        # 生成 GitHub Release 链接
         repo = os.environ.get("GITHUB_REPOSITORY", "sure1228/daily-news-digest")
         audio_url = f"https://github.com/{repo}/releases/download/{today}/news-{today}.mp3"
     
-    # 发送完整摘要，不再截断
     full_content = summary
     
-    # 添加音频播放提示
     if audio_path:
-        full_content += f"\n\n🎧 **点击收听今日新闻音频**\n\n[收听音频]({audio_url})\n\n(建议先点击上方链接试听音频，再查看下方的文字摘要)"
+        full_content += f"\n\n---\n\n🎧 **[点击收听音频]({audio_url})**"
     
-    # 如果没有音频文件，依然只发送摘要内容
+    links_section = "\n\n---\n\n📎 **今日新闻来源**\n\n"
+    seen_links = set()
+    for item in news_items[:15]:
+        if item.link and item.link not in seen_links:
+            links_section += f"- [{item.title[:40]}...]({item.link})\n"
+            seen_links.add(item.link)
+    
+    full_content += links_section
+    
     success = pusher.send(
         title=title,
         content=full_content,
