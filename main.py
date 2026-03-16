@@ -65,15 +65,18 @@ async def main():
     
     audio_url = None
     if audio_path:
-        audio_url = f"https://github.com/sure1228/daily-news-digest/actions"
+        # 生成 GitHub Release 链接
+        repo = os.environ.get("GITHUB_REPOSITORY", "sure1228/daily-news-digest")
+        audio_url = f"https://github.com/{repo}/releases/download/{today}/news-{today}.mp3"
     
-    audio_notice = ""
+    # 发送完整摘要，不再截断
+    full_content = summary
+    
+    # 添加音频播放提示
     if audio_path:
-        audio_notice = f"\n\n🎧 **音频文件已生成**\n请在 GitHub Actions Artifacts 中下载收听。\n链接: {audio_url}"
-
-    full_content = summary[:800] + "\n\n..." if len(summary) > 800 else summary
-    full_content += audio_notice
-
+        full_content += f"\n\n🎧 **点击收听今日新闻音频**\n\n[收听音频]({audio_url})\n\n(建议先点击上方链接试听音频，再查看下方的文字摘要)"
+    
+    # 如果没有音频文件，依然只发送摘要内容
     success = pusher.send(
         title=title,
         content=full_content,

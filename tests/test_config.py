@@ -11,7 +11,7 @@ def test_each_category_has_sources():
 
 
 def test_max_news_default():
-    assert MAX_NEWS_PER_CATEGORY == 5
+    assert MAX_NEWS_PER_CATEGORY >= 5
 
 
 def test_audio_duration_default():

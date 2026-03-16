@@ -30,6 +30,25 @@ jobs:
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
         run: python main.py
 
+      - name: Get current date
+        id: date
+        run: |
+          echo "date=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: Create Release and Upload Audio
+        uses: softprops/action-gh-release@v2
+        if: always() && !cancelled()
+        with:
+          name: "Daily Digest - ${{ steps.date.outputs.date }}"
+          tag_name: "${{ steps.date.outputs.date }}"
+          body: "每日新闻摘要音频 - ${{ steps.date.outputs.date }}"
+          files: |
+            output/*.mp3
+            output/*.txt
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: false
+
       - name: Upload audio artifact
         uses: actions/upload-artifact@v4
         if: always()
@@ -38,10 +57,10 @@ jobs:
           path: output/
           retention-days: 7
 
-      - name: Commit audio file
+      - name: Commit summary text
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add output/*.mp3 output/*.txt || true
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore: add daily audio digest"
+          git add output/*.txt || true
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: add daily news summary text"
           git push || true
