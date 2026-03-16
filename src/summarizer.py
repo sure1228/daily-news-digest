@@ -13,11 +13,15 @@ logger = logging.getLogger(__name__)
 AI_PROVIDERS = {
     "kimi": {
         "url": "https://api.moonshot.cn/v1/chat/completions",
-        "model": "moonshot-v1-8k",
+        "model": "moonshot-v1-32k",
     },
     "qwen": {
         "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
         "model": "qwen-turbo",
+    },
+    "qwen-plus": {
+        "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        "model": "qwen-plus",
     },
     "deepseek": {
         "url": "https://api.deepseek.com/v1/chat/completions",
@@ -125,24 +129,41 @@ class Summarizer:
             "Content-Type": "application/json",
         }
 
+        system_prompt = """你是一位专业新闻主播。你的任务是将新闻整理成适合音频播报的文稿。
+
+重要要求：
+1. 必须输出 2500-3000 字的完整文稿
+2. 不要中途停止，必须完成全部内容
+3. 每条新闻至少用 3-4 句话详细解释
+4. 包含开场白、正文、结束语三部分"""
+
+        user_prompt = f"""请将以下新闻整理成一篇 2500-3000 字的播报文稿。
+
+{SUMMARY_PROMPT.format(news_content=content)}
+
+记住：必须输出完整文稿，字数不能少于 2500 字！"""
+
         data = {
             "model": self.model,
             "messages": [
-                {
-                    "role": "system",
-                    "content": "你是一位专业新闻主播，擅长用简洁、口语化的方式播报新闻。",
-                },
-                {
-                    "role": "user",
-                    "content": SUMMARY_PROMPT.format(news_content=content),
-                },
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.7,
-            "max_tokens": 4000,
+            "max_tokens": 4096,
         }
 
-        response = requests.post(self.api_url, headers=headers, json=data, timeout=120)
+        logger.info(f"Calling {self.provider} API with model {self.model}")
+        response = requests.post(self.api_url, headers=headers, json=data, timeout=180)
         response.raise_for_status()
 
         result = response.json()
-        return result["choices"][0]["message"]["content"]
+        
+        if "choices" not in result:
+            logger.error(f"API response missing choices: {result}")
+            raise ValueError("Invalid API response")
+        
+        content = result["choices"][0]["message"]["content"]
+        logger.info(f"API returned {len(content)} characters, {result.get('usage', {})}")
+        
+        return content

@@ -62,11 +62,21 @@ async def main():
     pusher = WeChatPusher(os.getenv("PUSHPLUS_TOKEN", PUSHPLUS_TOKEN))
 
     title = f"📰 今日新闻摘要 - {today}"
+    
     audio_url = None
+    if audio_path:
+        audio_url = f"https://github.com/sure1228/daily-news-digest/actions"
+    
+    audio_notice = ""
+    if audio_path:
+        audio_notice = f"\n\n🎧 **音频文件已生成**\n请在 GitHub Actions Artifacts 中下载收听。\n链接: {audio_url}"
+
+    full_content = summary[:800] + "\n\n..." if len(summary) > 800 else summary
+    full_content += audio_notice
 
     success = pusher.send(
         title=title,
-        content=summary[:500] + "\n\n..." if len(summary) > 500 else summary,
+        content=full_content,
         audio_url=audio_url,
     )
 
