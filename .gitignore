@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.env
+output/*.mp3
+output/*.txt
+.pytest_cache/
+.venv/
+.idea/
+.vscode/
+*.egg-info/
