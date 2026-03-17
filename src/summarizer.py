@@ -129,26 +129,26 @@ class Summarizer:
             "Content-Type": "application/json",
         }
 
+        from datetime import datetime
+        today = datetime.now()
+        weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+        date_str = f"{today.year}年{today.month}月{today.day}日，{weekdays[today.weekday()]}"
+
         system_prompt = """你是一位专业新闻主播。你的任务是将新闻整理成适合音频播报的文稿。
 
-重要要求：
-1. 不要在文章开头使用"好的，我来为您整理"等类似开头语
-2. 不添加任何解释性内容，直接进入正题
-3. 每条新闻至少用 3-4 句话详细解释，包含背景、核心事实和影响
-4. 保持内容准确，语言自然流畅
-5. 包含开场白、正文、结束语三部分"""
+关键要求：
+1. 使用当天真实日期，不要使用新闻中的日期
+2. 结束语必须有实质内容：回顾重要事件 + 一句深度思考或展望
+3. 不要使用"感谢收听"、"祝您愉快"等空泛套话
+4. 每条新闻用 • 开头，详细说明（3-4句话）"""
 
-        user_prompt = f"""请将以下新闻直接整理成一篇适合播报的文稿，不要添加任何额外解释说明。
+        user_prompt = f"""今天是{date_str}。请整理以下新闻为播报文稿。
 
-新闻内容：
-{content}
+{SUMMARY_PROMPT.format(news_content=content)}
 
-播报文稿要求：
-- 每条新闻详细展开（3-4句话）
-- 总字数 2500-3000 字
-- 语言适合配音播报
-- 包含开场白、新闻分类播报、结束语
-- 直接输出文稿，不要任何解释"""
+特别提醒：
+- 开场白必须使用今天的日期：{date_str}
+- 结束语禁止使用"感谢收听"等套话，必须有一句有深度的思考"""
 
         data = {
             "model": self.model,
@@ -161,6 +161,7 @@ class Summarizer:
         }
 
         logger.info(f"Calling {self.provider} API with model {self.model}")
+        logger.info(f"Today's date: {date_str}")
         response = requests.post(self.api_url, headers=headers, json=data, timeout=180)
         response.raise_for_status()
 
@@ -173,11 +174,31 @@ class Summarizer:
         content = result["choices"][0]["message"]["content"]
         logger.info(f"API returned {len(content)} characters, {result.get('usage', {})}")
         
-        # 清理AI返回的废话开头
         content = self._clean_ai_response(content)
+        content = self._fix_ending(content)
         logger.info(f"After cleaning, content length: {len(content)} characters")
         
         return content
+    
+    def _fix_ending(self, text: str) -> str:
+        endings_to_avoid = [
+            "感谢收听",
+            "感谢您的收听",
+            "谢谢收听",
+            "谢谢您的收听",
+            "祝您愉快",
+            "祝您有美好的一天",
+            "祝大家愉快",
+            "再见",
+            "下期再见",
+            "明天见",
+        ]
+        
+        for ending in endings_to_avoid:
+            if ending in text:
+                text = text.replace(ending, "")
+        
+        return text
     
     def _clean_ai_response(self, text: str) -> str:
         """
