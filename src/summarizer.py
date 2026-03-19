@@ -51,6 +51,8 @@ class Summarizer:
             return "今日暂无新闻。"
 
         news_content = self.format_news_for_summary(news_items)
+        
+        logger.info(f"News content length: {len(news_content)} chars, {len(news_items)} items")
 
         if not self.api_key:
             logger.warning("No API key provided, returning formatted text")
@@ -58,10 +60,51 @@ class Summarizer:
 
         try:
             response = self._call_api(news_content)
+            
+            if len(response) < 600:
+                logger.warning(f"Summary too short ({len(response)} chars), requesting more detail")
+                response = self._expand_summary(response, news_items)
+            
             return response
         except Exception as e:
             logger.error(f"Failed to generate summary with {self.provider}: {e}")
             return self._format_as_broadcast(news_items)
+    
+    def _expand_summary(self, short_summary: str, news_items: List[NewsItem]) -> str:
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        
+        expand_prompt = f"""以下新闻摘要太短了，请扩展到 1000-1500 字。
+
+当前摘要：
+{short_summary}
+
+要求：
+1. 每条新闻增加背景信息和影响分析
+2. 保持 bullet point 格式
+3. 确保总字数达到 1000 字以上"""
+
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "user", "content": expand_prompt},
+            ],
+            "temperature": 0.7,
+            "max_tokens": 4096,
+        }
+
+        try:
+            response = requests.post(self.api_url, headers=headers, json=data, timeout=180)
+            response.raise_for_status()
+            result = response.json()
+            expanded = result["choices"][0]["message"]["content"]
+            logger.info(f"Expanded summary to {len(expanded)} chars")
+            return expanded
+        except Exception as e:
+            logger.error(f"Failed to expand summary: {e}")
+            return short_summary
 
     def format_news_for_summary(self, items: List[NewsItem]) -> str:
         sections = {}
