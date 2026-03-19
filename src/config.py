@@ -8,7 +8,6 @@ RSS_SOURCES: Dict[str, List[str]] = {
         "https://www.huxiu.com/rss/0.xml",
         "https://rsshub.app/ithome/ranking/7days",
         "https://rsshub.app/sspai/index",
-        "https://rsshub.app/ifanr/latest",
     ],
     "finance": [
         "https://rsshub.app/caixin/finance",
@@ -35,7 +34,6 @@ RSS_SOURCES: Dict[str, List[str]] = {
     "social": [
         "https://rsshub.app/toutiao/hot",
         "https://rsshub.app/xiaohongshu/hot",
-        "https://rsshub.app/douban/group/explore",
     ],
     "tech-community": [
         "https://rsshub.app/github/trending/daily",
