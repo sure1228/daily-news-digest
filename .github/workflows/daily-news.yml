@@ -2,7 +2,7 @@ name: Daily News Audio Digest
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # UTC 0:00 = 北京时间 8:00
+    - cron: '0 22 * * *'  # UTC 22:00 = 北京时间 6:00 (提前2小时应对延迟)
   workflow_dispatch:
 
 permissions:

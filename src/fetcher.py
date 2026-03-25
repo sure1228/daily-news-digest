@@ -6,6 +6,7 @@ import feedparser
 from src.models import NewsItem
 from src.config import MAX_NEWS_PER_CATEGORY
 from src.collection_expander import is_collection_news, process_collection_news
+from src.history import load_history, is_duplicate, add_to_history
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,9 @@ def is_ad_news(title: str) -> bool:
 
 
 class NewsFetcher:
+    def __init__(self):
+        self.history = load_history()
+    
     def fetch_rss(self, url: str, category: str = "general") -> List[NewsItem]:
         items = []
         try:
@@ -39,6 +43,10 @@ class NewsFetcher:
                     logger.debug(f"Filtered ad news: {title[:50]}...")
                     continue
                 
+                if is_duplicate(title, self.history):
+                    logger.debug(f"Filtered duplicate: {title[:50]}...")
+                    continue
+                
                 item = NewsItem(
                     title=title,
                     link=entry.get("link", ""),
@@ -50,7 +58,9 @@ class NewsFetcher:
                 
                 if is_collection_news(title):
                     expanded = process_collection_news(item)
-                    items.extend(expanded)
+                    for exp in expanded:
+                        if not is_duplicate(exp.title, self.history):
+                            items.append(exp)
                 else:
                     items.append(item)
                     
@@ -77,7 +87,11 @@ class NewsFetcher:
 
             all_items.extend(category_items[:max_per_category])
 
-        return self.deduplicate(all_items)
+        result = self.deduplicate(all_items)
+        
+        add_to_history([item.title for item in result])
+        
+        return result
 
     def deduplicate(self, items: List[NewsItem]) -> List[NewsItem]:
         seen_titles = set()
