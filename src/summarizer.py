@@ -92,7 +92,7 @@ class Summarizer:
                 {"role": "user", "content": expand_prompt},
             ],
             "temperature": 0.7,
-            "max_tokens": 4096,
+            "max_tokens": 2048,
         }
 
         try:
@@ -135,13 +135,22 @@ class Summarizer:
             "international": "国际",
             "hot": "热点",
             "general": "综合",
+            "social": "社交",
+            "tech-community": "技术社区",
         }
         return category_map.get(category, category)
 
     def _format_as_broadcast(self, items: List[NewsItem]) -> str:
+        if not items:
+            return "今日暂无新闻。"
+            
+        now = datetime.now()
+        weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+        date_str = f"{now.year}年{now.month}月{now.day}日，{weekdays[now.weekday()]}"
+        
         lines = [
-            "各位听众早上好，欢迎收听今日新闻摘要。",
-            f"今天是{self._get_date_string()}。\n",
+            f"早上好，今天是{date_str}。",
+            f"今天共有{len(items)}条新闻。\n",
         ]
 
         sections = {}
@@ -152,13 +161,14 @@ class Summarizer:
             sections[cat].append(item)
 
         for category, news_list in sections.items():
-            lines.append(f"\n下面是{category}新闻。")
-            for i, item in enumerate(news_list[:5], 1):
-                lines.append(f"{i}. {item.title}")
+            lines.append(f"\n【{category}】")
+            for item in news_list[:6]:
+                lines.append(f"• {item.title}")
                 if item.summary:
-                    lines.append(f"   {item.summary[:100]}")
+                    clean_summary = item.summary.replace('<', '').replace('>', '')[:150]
+                    lines.append(f"  {clean_summary}")
 
-        lines.append("\n以上是今日新闻摘要，感谢您的收听，祝您有美好的一天！")
+        lines.append(f"\n以上是{date_str}的新闻摘要。")
         return "\n".join(lines)
 
     def _get_date_string(self) -> str:
@@ -200,7 +210,7 @@ class Summarizer:
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.7,
-            "max_tokens": 4096,
+            "max_tokens": 2048,
         }
 
         logger.info(f"Calling {self.provider} API with model {self.model}")
