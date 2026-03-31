@@ -130,28 +130,24 @@ class Summarizer:
 
     def _get_category_name(self, category: str) -> str:
         category_map = {
-            "tech": "科技",
-            "finance": "财经",
-            "international": "国际",
-            "hot": "热点",
-            "general": "综合",
-            "social": "社交",
-            "tech-community": "技术社区",
+            "tech": "科技前沿",
+            "finance": "财经市场",
+            "international": "国际动态",
+            "hot": "社会热点",
+            "general": "国内要闻",
+            "social": "社会热点",
+            "tech-community": "科技前沿",
         }
-        return category_map.get(category, category)
+        return category_map.get(category, "综合")
 
     def _format_as_broadcast(self, items: List[NewsItem]) -> str:
         if not items:
             return "今日暂无新闻。"
             
         now = datetime.now()
-        weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-        date_str = f"{now.year}年{now.month}月{now.day}日，{weekdays[now.weekday()]}"
+        date_str = f"{now.year}年{now.month}月{now.day}日"
         
-        lines = [
-            f"早上好，今天是{date_str}。",
-            f"今天共有{len(items)}条新闻。\n",
-        ]
+        lines = [f"📰 {date_str} 每日新闻汇总"]
 
         sections = {}
         for item in items:
@@ -160,15 +156,31 @@ class Summarizer:
                 sections[cat] = []
             sections[cat].append(item)
 
-        for category, news_list in sections.items():
-            lines.append(f"\n【{category}】")
-            for item in news_list[:6]:
-                lines.append(f"• {item.title}")
-                if item.summary:
-                    clean_summary = item.summary.replace('<', '').replace('>', '')[:150]
-                    lines.append(f"  {clean_summary}")
+        category_order = ["国内要闻", "国际动态", "科技前沿", "财经市场", "社会热点", "科技", "财经", "国际", "热点", "综合", "社交", "技术社区"]
+        category_num = 1
+        
+        for category in category_order:
+            if category in sections:
+                news_list = sections[category]
+                lines.append(f"\n{category_num}. {category}")
+                for item in news_list[:4]:
+                    lines.append(item.title)
+                    if item.summary:
+                        clean = item.summary.replace('<', '').replace('>', '').replace('\n', ' ')[:120]
+                        lines.append(f"{clean}。")
+                category_num += 1
 
-        lines.append(f"\n以上是{date_str}的新闻摘要。")
+        for category, news_list in sections.items():
+            if category not in category_order:
+                lines.append(f"\n{category_num}. {category}")
+                for item in news_list[:4]:
+                    lines.append(item.title)
+                    if item.summary:
+                        clean = item.summary.replace('<', '').replace('>', '').replace('\n', ' ')[:120]
+                        lines.append(f"{clean}。")
+                category_num += 1
+
+        lines.append("\n以上新闻来自澎湃新闻、36氪、财新网等权威媒体，精选当日重要资讯。")
         return "\n".join(lines)
 
     def _get_date_string(self) -> str:
